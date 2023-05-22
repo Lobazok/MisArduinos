@@ -5,9 +5,11 @@ LiquidCrystal lcd(0, 1, 2, 4, 7, 8);
 int contrast = 0;
 
 //tecla A, B y X
-const int pinA = 13;
-const int pinB = 12;
-const int pinX = 11;
+const int pinA = 12;
+const int pinB = 10;
+const int pinX = 9;
+
+const int pinTrans = 11;
 
 const int piezo = 3;
 
@@ -38,38 +40,20 @@ const char* morseLetters[] = {
 String morseCode = "";
 String currentLetter = "";
 
-// Función para convertir código Morse a letra
-char convertMorseToLetter(String morse) {
-  for (int i = 0; i < 26; i++) {
-    if (morse == morseLetters[i]) {
-      return 'A' + i;
-    }
-  }
-  return '?';
-}
+unsigned long tiempoInicio = 0;  // Variable para almacenar el tiempo de inicio de la pulsación
+String pulsaciones = "";  // Cadena para almacenar las pulsaciones
+String pulsacionesPantalla = "";
 
-// Función para manejar el ingreso de código Morse
-void measureMorseCode() {
-  if (stateA == HIGH && stateB == LOW) {
-    // Botón A presionado
-    morseCode += '.';
-  } else if (stateA == LOW && stateB == HIGH) {
-    // Botón B presionado
-    morseCode += '-';
-  } else if (stateA == HIGH && stateB == HIGH) {
-    // Ambos botones presionados, interpretar el código Morse
-    char letter = convertMorseToLetter(morseCode);
-    if (letter != '?') {
-      currentLetter += letter;
-    }
-    morseCode = "";
-  }
-   if (morseCode.length() > 16) {
-    morseCode = morseCode.substring(1); // Eliminar el primer carácter
+String obtenerUltimos16(String cadena) {
+  int longitudTotal = cadena.length();
+  
+  if (longitudTotal <= 16) {
+    return cadena;
+  } else {
+    int indiceInicial = longitudTotal - 16;
+    return cadena.substring(indiceInicial);
   }
 }
-
-
 
 void setup() {
 
@@ -77,6 +61,8 @@ void setup() {
     pinMode(pinX, INPUT);
     pinMode(pinA, INPUT);
     pinMode(pinB, INPUT);
+  
+    pinMode(pinTrans, OUTPUT);
   
     pinMode(6, OUTPUT);
     pinMode(5, OUTPUT);
@@ -91,11 +77,28 @@ void setup() {
 
 void loop() {
   lcd.clear();
+  if (menu == 4){
+          if(stateA == HIGH){ 
+            pulsaciones += "1";
+          }else{ 
+            pulsaciones += "0";
+          }
+    if(stateB == HIGH){ 
+      for (int i = 0; i < pulsaciones.length(); i++) {
+        char pulso = pulsaciones[i];
+        if(pulso == '1'){
+          digitalWrite(pinTrans , HIGH);
+        }else digitalWrite(pinTrans , LOW);
+        delay(500);
+      }
+   }
+  }
   analogWrite(6, contrast);
   
    stateX = digitalRead(pinX);
    stateA = digitalRead(pinA);
    stateB = digitalRead(pinB);
+
 
     if (stateX == HIGH || stateA == HIGH || stateB == HIGH) {
         if (stateX != pevStateX || stateA != pevStateA || stateB != pevStateB) {
@@ -140,8 +143,7 @@ void loop() {
             
             
         }else if (menu == 4){
-          //aqui debes crear una funcion que decteste las teclas A y B, que a sea un 1 y B un 0, con eso debes intepretar y pasar de morse a texto y agregar la letra en texto
-          measureMorseCode();
+
         }
          
            if(menu == 0){
@@ -175,7 +177,7 @@ void loop() {
         lcd.setCursor(0, 0);
         lcd.print("> contrase ");
         lcd.setCursor(0, 1);
-        lcd.print("  temp");
+        lcd.print("  tono");
      }else if(lugar == 1){
         lcd.clear();
         lcd.setCursor(0, 0);
@@ -244,10 +246,11 @@ void loop() {
     lcd.print(temperatura);
     lcd.print("c");
   }if(menu == 4){
+      pulsacionesPantalla = obtenerUltimos16(pulsaciones);
     
     lcd.clear();
     lcd.setCursor(0, 0);
-    lcd.print(morseCode);
+    lcd.print(pulsacionesPantalla);
     lcd.setCursor(0, 1);
     lcd.print("morse sin cifrado");
   }else
@@ -255,5 +258,5 @@ void loop() {
     pevStateX = stateX;
     pevStateA = stateA;
     pevStateB = stateB;
-  delay(200);
+  delay(250);
 }
